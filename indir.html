@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MentorKoçum · İndir</title>
+<meta name="description" content="MentorKoçum uygulamasını telefonuna indir: Google Play ve App Store.">
+<link rel="icon" href="simge.png">
+<link rel="stylesheet" href="ortak.css">
+<script>
+  // Föy kapağındaki QR buraya gelir (https://mentorkocum.github.io/indir). Mağaza bağlantıları yayından sonra
+  // aşağıya yazılır; bağlantı doluysa telefon türüne göre doğrudan mağazaya gidilir, boşsa bu sayfa görünür.
+  var PLAY = '';   // ör. https://play.google.com/store/apps/details?id=com.mentorkoc.app
+  var APPSTORE = ''; // ör. https://apps.apple.com/tr/app/id0000000000
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/android/i.test(ua) && PLAY) location.replace(PLAY);
+    else if (/iphone|ipad|ipod/i.test(ua) && APPSTORE) location.replace(APPSTORE);
+  })();
+</script>
+</head>
+<body>
+<header><div class="ic"><img src="logo.svg" alt="MentorKoçum"></div></header>
+<main>
+<h1>MentorKoçum'u indir</h1>
+<p class="tarih">LGS ve YKS'ye çalışırken yanındaki koç</p>
+
+<div class="ozet">
+  <p id="yakinda">Uygulama yakında Google Play ve App Store'da. Hazır olunca bu sayfa seni doğrudan mağazaya götürecek.</p>
+  <ul id="baglantilar" style="display:none">
+    <li><a id="play" href="#">Google Play'den indir (Android)</a></li>
+    <li><a id="appstore" href="#">App Store'dan indir (iPhone)</a></li>
+  </ul>
+</div>
+<script>
+  if (PLAY || APPSTORE) {
+    document.getElementById('yakinda').style.display = 'none';
+    var liste = document.getElementById('baglantilar');
+    liste.style.display = '';
+    if (PLAY) document.getElementById('play').href = PLAY; else document.getElementById('play').parentNode.style.display = 'none';
+    if (APPSTORE) document.getElementById('appstore').href = APPSTORE; else document.getElementById('appstore').parentNode.style.display = 'none';
+  }
+</script>
+
+<h2>Destek</h2>
+<p>Soru ve öneriler için: <a href="mailto:mentorkoc1137@gmail.com">mentorkoc1137@gmail.com</a>.</p>
+
+<footer>MentorKoçum · <a href="index.html">Ana sayfa</a> · <a href="gizlilik.html">Gizlilik</a></footer>
+</main>
+</body>
+</html>
