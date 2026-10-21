@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MentorKoçum · Davet</title>
+<meta name="description" content="MentorKoçum davet linki: uygulamayı indir, davet koduyla üye ol.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/simge.png">
+<link rel="stylesheet" href="/ortak.css">
+<script>
+  // Davet linki: mentorkocum.com/<KOD> (6 karakter). GitHub Pages olmayan yolu bu sayfaya düşürür; yoldaki kod
+  // okunur. Android → Play (kod referrer parametresinde gider, uygulama üyelikte kendiliğinden doldurur);
+  // iPhone → App Store (kod elle yazılır, sayfada gösterilir); masaüstü → iki düğme. Mağaza bağlantıları yayına kadar
+  // boş: o zaman /indir sayfasına gidilir. Kod olmayan yollar da indir sayfasına gider.
+  var PLAY = '';     // ör. https://play.google.com/store/apps/details?id=com.mentorkoc.app
+  var APPSTORE = ''; // ör. https://apps.apple.com/tr/app/id0000000000
+  var yol = location.pathname.replace(/^\/+|\/+$/g, '').toUpperCase();
+  var KOD = /^[2-9A-HJKMNP-Z]{6}$/.test(yol) ? yol : '';
+  var playLinki = PLAY ? PLAY + '&referrer=' + encodeURIComponent(KOD) : '';
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (!KOD) { location.replace('/indir.html'); return; }
+    if (/android/i.test(ua) && playLinki) location.replace(playLinki);
+    else if (/iphone|ipad|ipod/i.test(ua) && APPSTORE) location.replace(APPSTORE);
+  })();
+</script>
+</head>
+<body>
+<header><div class="ic"><img src="/logo.svg" alt="MentorKoçum"></div></header>
+<main>
+<h1>Arkadaşın seni MentorKoçum'a davet etti</h1>
+<p class="tarih">LGS ve YKS'ye çalışırken yanındaki koç · 7 gün ücretsiz</p>
+
+<div class="ozet">
+  <p>Davet kodun:</p>
+  <p id="kod" style="font-size:2rem;letter-spacing:.3em;font-weight:600;margin:.2em 0 1em"></p>
+  <p id="yakinda">Uygulama yakında Google Play ve App Store'da. Hazır olunca bu sayfa seni doğrudan mağazaya götürecek; üye olurken bu kodu yaz.</p>
+  <ul id="baglantilar" style="display:none">
+    <li><a id="play" href="#">Google Play'den indir (Android) — kod kendiliğinden gelir</a></li>
+    <li><a id="appstore" href="#">App Store'dan indir (iPhone) — üye olurken kodu yaz</a></li>
+  </ul>
+</div>
+<script>
+  document.getElementById('kod').textContent = KOD;
+  if (PLAY || APPSTORE) {
+    document.getElementById('yakinda').style.display = 'none';
+    var liste = document.getElementById('baglantilar');
+    liste.style.display = '';
+    if (PLAY) document.getElementById('play').href = playLinki; else document.getElementById('play').parentNode.style.display = 'none';
+    if (APPSTORE) document.getElementById('appstore').href = APPSTORE; else document.getElementById('appstore').parentNode.style.display = 'none';
+  }
+</script>
+
+<footer>MentorKoçum · <a href="/index.html">Ana sayfa</a> · <a href="/gizlilik.html">Gizlilik</a></footer>
+</main>
+</body>
+</html>
