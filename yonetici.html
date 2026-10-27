@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>MentorKoçum Yönetici</title>
+<link rel="icon" href="simge.png">
+<link rel="stylesheet" href="ortak.css">
+<!--
+  Yönetici sayfası (27.10.2026). Sayfa herkese açık bir dosyadır; veriler sunucudaki yonetici_ozet sorgusundan gelir ve
+  yalnız yönetici hesabına döner (supabase/migrations/20261027150000_yonetici.sql). Anahtar uygulamadaki herkese açık
+  (publishable) anahtardır. Ad, e-posta gibi metinler sayfaya yalnız textContent ile yazılır.
+-->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+  main { max-width: 1100px; }
+  .gizli { display: none !important; }
+  .giris { max-width: 380px; }
+  .giris label { display: block; font-size: 0.9rem; color: var(--soluk); margin: 12px 0 4px; }
+  input, select, button { font: inherit; }
+  input[type=email], input[type=password], input[type=search], select {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--cizgi);
+    background: var(--kutu); color: var(--yazi);
+  }
+  button { padding: 10px 18px; border-radius: 22px; border: 0; background: var(--vurgu); color: #fff; cursor: pointer; }
+  button.ikincil { background: transparent; color: var(--soluk); border: 1px solid var(--cizgi); }
+  .hata { color: #c0392b; margin: 10px 0; }
+  .ust { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .ust p { margin: 0; color: var(--soluk); font-size: 0.9rem; }
+  .kutular { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 18px 0; }
+  .sayi { background: var(--kutu); border: 1px solid var(--cizgi); border-radius: 12px; padding: 12px 14px; }
+  .sayi b { display: block; font-size: 1.7rem; line-height: 1.2; }
+  .sayi span { color: var(--soluk); font-size: 0.85rem; }
+  .bolum { background: var(--kutu); border: 1px solid var(--cizgi); border-radius: 12px; padding: 14px 16px; margin: 16px 0; }
+  .bolum h2 { margin: 0 0 10px; font-size: 1.05rem; }
+  .kaydir { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { padding: 7px 9px; border-bottom: 1px solid var(--cizgi); text-align: left; white-space: nowrap; }
+  th { color: var(--soluk); font-weight: 600; }
+  td.sag, th.sag { text-align: right; }
+  .matris td.hucre { text-align: center; cursor: pointer; }
+  .matris td.hucre:hover { background: var(--zemin); }
+  .matris td.bos { color: var(--cizgi); cursor: default; }
+  .matris td.secili { outline: 2px solid var(--vurgu); outline-offset: -2px; }
+  .not { color: var(--soluk); font-size: 0.85rem; margin: 8px 0 0; }
+  .grafik svg { width: 100%; height: 140px; display: block; }
+  .sehir { display: grid; grid-template-columns: minmax(110px, 180px) 1fr 40px; gap: 6px 10px; align-items: center; font-size: 0.9rem; }
+  .cubuk { height: 10px; border-radius: 5px; background: var(--nane); }
+  .sekmeler { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sekmeler button { background: transparent; color: var(--soluk); border: 1px solid var(--cizgi); padding: 7px 14px; }
+  .sekmeler button.acik { background: var(--vurgu); color: #fff; border-color: var(--vurgu); }
+  .araclar { display: grid; grid-template-columns: 1fr 200px; gap: 8px; margin-bottom: 8px; }
+  .suzgec { display: inline-flex; align-items: center; gap: 6px; background: var(--zemin); border: 1px solid var(--cizgi);
+    border-radius: 16px; padding: 2px 4px 2px 12px; font-size: 0.85rem; margin-bottom: 8px; }
+  .suzgec button { padding: 2px 9px; background: transparent; color: var(--soluk); }
+  .etiket { font-size: 0.78rem; padding: 2px 8px; border-radius: 10px; background: var(--zemin); border: 1px solid var(--cizgi); }
+  @media (max-width: 600px) { .araclar { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header><div class="ic"><img src="logo.svg" alt="MentorKoçum"></div></header>
+<main>
+
+<section id="girisBolumu" class="giris">
+  <h1>Yönetici</h1>
+  <p class="tarih">Uygulamadaki hesabınla gir.</p>
+  <form id="girisFormu">
+    <label for="eposta">E-posta</label>
+    <input id="eposta" type="email" autocomplete="username" required>
+    <label for="sifre">Şifre</label>
+    <input id="sifre" type="password" autocomplete="current-password" required>
+    <p id="girisHata" class="hata gizli"></p>
+    <p><button type="submit" id="girisDugme">Giriş</button></p>
+  </form>
+</section>
+
+<section id="panel" class="gizli">
+  <div class="ust">
+    <div><h1>Yönetici</h1><p id="guncel"></p></div>
+    <div><button class="ikincil" id="yenile">Yenile</button> <button class="ikincil" id="cikis">Çıkış</button></div>
+  </div>
+  <p id="panelHata" class="hata gizli"></p>
+
+  <div class="kutular" id="kutular"></div>
+
+  <div class="bolum grafik">
+    <h2>Son 30 günde yeni üyeler</h2>
+    <div id="grafik"></div>
+  </div>
+
+  <div class="bolum">
+    <h2>Sınıf ve alan (öğrenciler)</h2>
+    <div class="kaydir"><table class="matris" id="matris"></table></div>
+    <p class="not" id="sinavNotu"></p>
+    <p class="not">Bir sayıya dokununca aşağıdaki listeler o gruba süzülür.</p>
+  </div>
+
+  <div class="bolum">
+    <h2>Şehirler</h2>
+    <div class="sehir" id="sehirler"></div>
+    <p class="not">Yaklaşık kayıt şehri (internet adresinden); yoksa profilde yazılan şehir. Mobil hatta şehir büyük şehre kayabilir.</p>
+  </div>
+
+  <div class="bolum">
+    <div class="sekmeler" id="sekmeler">
+      <button data-sekme="uyeler" class="acik">Üyeler</button>
+      <button data-sekme="deneme">Aboneler / deneme</button>
+      <button data-sekme="aktif">Aktif (son 7 gün)</button>
+    </div>
+    <div class="araclar">
+      <input type="search" id="ara" placeholder="Ad, e-posta ya da şehir ara">
+      <select id="sirala"></select>
+    </div>
+    <div id="suzgecYeri"></div>
+    <div class="kaydir"><table id="liste"></table></div>
+    <p class="not" id="listeNotu"></p>
+  </div>
+</section>
+
+</main>
+<script>
+(() => {
+  const ADRES = 'https://zkexgpsfapawmbqzzuso.supabase.co';
+  const ANAHTAR = 'sb_publishable_gPaW4eTz6mv18xjmTeujOA_7jatEHQC';
+  const sb = supabase.createClient(ADRES, ANAHTAR);
+  const $ = (id) => document.getElementById(id);
+
+  const SINIFLAR = ['6', '7', '8', '9', '10', '11', '12', 'mezun'];
+  const ALANLAR = [['sayisal', 'Sayısal'], ['esit_agirlik', 'EA'], ['sozel', 'Sözel'], ['dil', 'Dil'], ['', 'Alansız']];
+  const SINIF_ADI = (s) => (s === 'mezun' ? 'Mezun' : s ? `${s}. sınıf` : 'Sınıf yok');
+  const ALAN_ADI = Object.fromEntries(ALANLAR);
+  const SINAV_ADI = { tyt: 'TYT', ayt: 'AYT', tyt_ayt: 'TYT + AYT' };
+
+  let veri = null;
+  let sekme = 'uyeler';
+  let suzgec = null; // { sinif, alan }
+
+  // --- Tarih yardımcıları (İstanbul saatine göre gün) ---
+  const gunMetni = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  const bugun = () => gunMetni(new Date());
+  const gunFarki = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 86400000);
+  const kisaTarih = (iso) => (iso ? new Date(iso.length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+  const sonGiris = (u) => u.son_giris || (u.oturum ? gunMetni(new Date(u.oturum)) : null);
+
+  // --- Üye bilgisinden türetilenler ---
+  const adSoyad = (u) => [u.ad, u.soyad].filter(Boolean).join(' ') || '(adsız)';
+  const sehirOf = (u) => u.kayit_sehri || u.sehir || 'Belirtilmemiş';
+  const sinifAlan = (u) => (u.rol !== 'ogrenci' ? '—' : `${SINIF_ADI(u.sinif)}${u.alan ? ' · ' + ALAN_ADI[u.alan] : ''}`);
+  function denemeDurumu(u) {
+    const d = u.deneme;
+    if (!d) return { ad: '—', kalan: null };
+    if (d.secim === 'abone') return { ad: 'Abone', kalan: null };
+    if (!d.baslangic) return { ad: 'Başlamadı', kalan: null };
+    const kalan = d.bitis ? gunFarki(d.bitis, bugun()) : null;
+    return kalan !== null && kalan > 0 ? { ad: 'Denemede', kalan } : { ad: 'Süresi bitti', kalan: 0 };
+  }
+  const aktif = (u) => { const g = sonGiris(u); return !!g && gunFarki(bugun(), g) <= 6; };
+
+  // --- Giriş ---
+  $('girisFormu').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('girisHata').classList.add('gizli');
+    $('girisDugme').disabled = true;
+    const { error } = await sb.auth.signInWithPassword({ email: $('eposta').value.trim(), password: $('sifre').value });
+    $('girisDugme').disabled = false;
+    if (error) { goster($('girisHata'), 'Giriş olmadı: e-posta ya da şifre yanlış.'); return; }
+    $('sifre').value = '';
+    await yukle();
+  });
+  $('cikis').addEventListener('click', async () => { await sb.auth.signOut(); veri = null; ekran('giris'); });
+  $('yenile').addEventListener('click', () => yukle());
+
+  function goster(el, metin) { el.textContent = metin; el.classList.remove('gizli'); }
+  function ekran(ad) {
+    $('girisBolumu').classList.toggle('gizli', ad !== 'giris');
+    $('panel').classList.toggle('gizli', ad !== 'panel');
+  }
+
+  async function yukle() {
+    const { data, error } = await sb.rpc('yonetici_ozet');
+    if (error) {
+      await sb.auth.signOut();
+      ekran('giris');
+      goster($('girisHata'), error.code === '42501' ? 'Bu hesabın yönetici izni yok.' : 'Veriler alınamadı: ' + error.message);
+      return;
+    }
+    veri = data;
+    $('panelHata').classList.add('gizli');
+    ekran('panel');
+    $('guncel').textContent = 'Güncellendi: ' + new Date(data.zaman).toLocaleString('tr-TR');
+    ciz();
+  }
+
+  // --- Çizim ---
+  function ciz() {
+    const uyeler = veri.uyeler;
+    const ogrenciler = uyeler.filter((u) => u.rol === 'ogrenci');
+    const veliler = uyeler.filter((u) => u.rol === 'veli');
+    const yeni7 = uyeler.filter((u) => gunFarki(bugun(), gunMetni(new Date(u.kayit))) <= 6);
+    const durumlar = ogrenciler.map(denemeDurumu);
+    const kutular = [
+      ['Öğrenci', ogrenciler.length],
+      ['Veli', veliler.length],
+      ['Son 7 gün yeni üye', yeni7.length],
+      ['Son 7 gün aktif öğrenci', ogrenciler.filter(aktif).length],
+      ['Bu hafta program kuran', ogrenciler.filter((u) => u.hafta.program).length],
+      ['Bu hafta derse başlayan', ogrenciler.filter((u) => u.hafta.ders > 0).length],
+      ['Bu hafta soru çözen', ogrenciler.filter((u) => u.hafta.soru > 0).length],
+      ['Abone', durumlar.filter((d) => d.ad === 'Abone').length],
+      ['Ücretsiz denemede', durumlar.filter((d) => d.ad === 'Denemede').length],
+      ['Denemesi biten', durumlar.filter((d) => d.ad === 'Süresi bitti').length],
+    ];
+    const k = $('kutular');
+    k.replaceChildren(...kutular.map(([ad, n]) => {
+      const div = document.createElement('div'); div.className = 'sayi';
+      const b = document.createElement('b'); b.textContent = n;
+      const s = document.createElement('span'); s.textContent = ad;
+      div.append(b, s); return div;
+    }));
+    grafik(uyeler);
+    matris(ogrenciler);
+    sehirler(uyeler);
+    liste();
+  }
+
+  function grafik(uyeler) {
+    const gunler = [];
+    for (let i = 29; i >= 0; i -= 1) gunler.push(gunMetni(new Date(Date.now() - i * 86400000)));
+    const sayi = Object.fromEntries(gunler.map((g) => [g, 0]));
+    for (const u of uyeler) { const g = gunMetni(new Date(u.kayit)); if (g in sayi) sayi[g] += 1; }
+    const enCok = Math.max(1, ...Object.values(sayi));
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 300 120'); svg.setAttribute('preserveAspectRatio', 'none');
+    gunler.forEach((g, i) => {
+      const h = (sayi[g] / enCok) * 100;
+      const r = document.createElementNS(ns, 'rect');
+      r.setAttribute('x', i * 10 + 1); r.setAttribute('width', 8);
+      r.setAttribute('y', 105 - h); r.setAttribute('height', Math.max(h, 0.5));
+      r.setAttribute('rx', 1.5); r.setAttribute('fill', 'var(--vurgu)');
+      const t = document.createElementNS(ns, 'title'); t.textContent = `${kisaTarih(g)}: ${sayi[g]}`; r.append(t);
+      svg.append(r);
+    });
+    const yazi = document.createElement('p'); yazi.className = 'not';
+    yazi.textContent = `${kisaTarih(gunler[0])} – ${kisaTarih(gunler[29])} · toplam ${Object.values(sayi).reduce((a, b) => a + b, 0)} · en çok bir günde ${enCok}`;
+    $('grafik').replaceChildren(svg, yazi);
+  }
+
+  function matris(ogrenciler) {
+    const t = $('matris');
+    t.replaceChildren();
+    const bas = t.insertRow();
+    for (const h of ['Sınıf', ...ALANLAR.map((a) => a[1]), 'Toplam']) {
+      const th = document.createElement('th'); th.textContent = h; if (h !== 'Sınıf') th.className = 'sag'; bas.append(th);
+    }
+    const satirlar = [...SINIFLAR, null];
+    for (const s of satirlar) {
+      const ogr = ogrenciler.filter((u) => (s === null ? !u.sinif : u.sinif === s));
+      if (s === null && !ogr.length) continue;
+      const tr = t.insertRow();
+      const ad = tr.insertCell(); ad.textContent = SINIF_ADI(s);
+      for (const [alan] of ALANLAR) {
+        const n = ogr.filter((u) => (u.alan || '') === alan).length;
+        hucre(tr, n, { sinif: s, alan });
+      }
+      hucre(tr, ogr.length, { sinif: s, alan: undefined });
+    }
+    const top = t.insertRow();
+    const ad = top.insertCell(); ad.textContent = 'Toplam'; ad.style.fontWeight = '600';
+    for (const [alan] of ALANLAR) hucre(top, ogrenciler.filter((u) => (u.alan || '') === alan).length, { sinif: undefined, alan });
+    hucre(top, ogrenciler.length, null);
+    const sinav = {};
+    for (const u of ogrenciler) {
+      const ad = u.sinav ? SINAV_ADI[u.sinav] : ['6', '7', '8'].includes(u.sinif) ? 'LGS / ortaokul' : u.sinif ? 'Sınavsız (9–10)' : 'Bilinmiyor';
+      sinav[ad] = (sinav[ad] || 0) + 1;
+    }
+    $('sinavNotu').textContent = 'Sınav: ' + Object.entries(sinav).map(([a, n]) => `${a} ${n}`).join(' · ');
+  }
+  function hucre(tr, n, kosul) {
+    const td = tr.insertCell(); td.textContent = n || '·';
+    td.className = 'sag ' + (n ? 'hucre' : 'bos');
+    if (kosul && n) {
+      if (suzgec && suzgec.sinif === kosul.sinif && suzgec.alan === kosul.alan) td.classList.add('secili');
+      td.addEventListener('click', () => { suzgec = kosul; ciz(); $('liste').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    }
+    if (kosul === null && n) td.addEventListener('click', () => { suzgec = null; ciz(); });
+  }
+
+  // Cloudflare şehri İngilizce yazımla verir ("Istanbul", "Izmir"); profildeki "İstanbul" ile aynı satırda sayılsın diye
+  // Türkçe harflerden bağımsız anahtar kullanılır, gösterilen ad Türkçe harfli yazım (varsa).
+  const TR_HARF = { ç: 'c', ğ: 'g', ı: 'i', i: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' };
+  const sehirAnahtari = (s) => s.toLocaleLowerCase('tr').replace(/[çğıiöşüâîû]/g, (h) => TR_HARF[h]).normalize('NFD').replace(/[̀-ͯ]/g, '');
+  function sehirler(uyeler) {
+    const sayi = new Map();
+    for (const u of uyeler) {
+      const s = sehirOf(u);
+      const anahtar = sehirAnahtari(s);
+      const e = sayi.get(anahtar) || { ad: s, n: 0 }; e.n += 1;
+      if (/[çğıİöşüÇĞÖŞÜ]/.test(s) && !/[çğıİöşüÇĞÖŞÜ]/.test(e.ad)) e.ad = s;
+      sayi.set(anahtar, e);
+    }
+    const sirali = [...sayi.values()].sort((a, b) => b.n - a.n);
+    const enCok = Math.max(1, ...sirali.map((e) => e.n));
+    const kap = $('sehirler'); kap.replaceChildren();
+    for (const e of sirali.slice(0, 20)) {
+      const ad = document.createElement('div'); ad.textContent = e.ad;
+      const cubukYer = document.createElement('div');
+      const cubuk = document.createElement('div'); cubuk.className = 'cubuk'; cubuk.style.width = `${(e.n / enCok) * 100}%`;
+      cubukYer.append(cubuk);
+      const n = document.createElement('div'); n.textContent = e.n; n.style.textAlign = 'right';
+      kap.append(ad, cubukYer, n);
+    }
+  }
+
+  // --- Listeler ---
+  const SIRALAR = {
+    uyeler: [['kayit', 'Kayıt (yeni önce)'], ['giris', 'Son giriş (yeni önce)'], ['ad', 'Ad (A–Z)']],
+    deneme: [['kalan', 'Kalan gün (az önce)'], ['kayit', 'Kayıt (yeni önce)'], ['davet', 'Davet (çok önce)']],
+    aktif: [['giris', 'Son giriş (yeni önce)'], ['soru', 'Soru (çok önce)'], ['ders', 'Ders (çok önce)']],
+  };
+  $('sekmeler').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    sekme = b.dataset.sekme;
+    for (const x of $('sekmeler').children) x.classList.toggle('acik', x === b);
+    sirala();
+    liste();
+  });
+  function sirala() {
+    $('sirala').replaceChildren(...SIRALAR[sekme].map(([v, a]) => { const o = document.createElement('option'); o.value = v; o.textContent = a; return o; }));
+  }
+  sirala();
+  $('ara').addEventListener('input', () => liste());
+  $('sirala').addEventListener('change', () => liste());
+
+  function liste() {
+    if (!veri) return;
+    let uyeler = veri.uyeler.slice();
+    if (sekme !== 'uyeler') uyeler = uyeler.filter((u) => u.rol === 'ogrenci');
+    if (sekme === 'aktif') uyeler = uyeler.filter(aktif);
+    if (suzgec) {
+      uyeler = uyeler.filter((u) => u.rol === 'ogrenci'
+        && (suzgec.sinif === undefined || (suzgec.sinif === null ? !u.sinif : u.sinif === suzgec.sinif))
+        && (suzgec.alan === undefined || (u.alan || '') === suzgec.alan));
+    }
+    const q = $('ara').value.trim().toLocaleLowerCase('tr');
+    if (q) uyeler = uyeler.filter((u) => [adSoyad(u), u.eposta, sehirOf(u)].join(' ').toLocaleLowerCase('tr').includes(q));
+    const s = $('sirala').value;
+    const gTarih = (u) => sonGiris(u) || '';
+    const kiyas = {
+      kayit: (a, b) => (b.kayit || '').localeCompare(a.kayit || ''),
+      giris: (a, b) => gTarih(b).localeCompare(gTarih(a)),
+      ad: (a, b) => adSoyad(a).localeCompare(adSoyad(b), 'tr'),
+      kalan: (a, b) => (denemeDurumu(a).kalan ?? 999) - (denemeDurumu(b).kalan ?? 999),
+      davet: (a, b) => (b.deneme?.davet_sayisi || 0) - (a.deneme?.davet_sayisi || 0),
+      soru: (a, b) => b.hafta.soru - a.hafta.soru,
+      ders: (a, b) => b.hafta.ders - a.hafta.ders,
+    }[s];
+    uyeler.sort(kiyas);
+
+    const yer = $('suzgecYeri'); yer.replaceChildren();
+    if (suzgec) {
+      const c = document.createElement('span'); c.className = 'suzgec';
+      const parca = [];
+      if (suzgec.sinif !== undefined) parca.push(SINIF_ADI(suzgec.sinif));
+      if (suzgec.alan !== undefined) parca.push(ALAN_ADI[suzgec.alan]);
+      c.textContent = 'Süzgeç: ' + parca.join(' · ');
+      const x = document.createElement('button'); x.textContent = '×'; x.title = 'Süzgeci kaldır';
+      x.addEventListener('click', () => { suzgec = null; ciz(); });
+      c.append(x); yer.append(c);
+    }
+
+    const sutunlar = {
+      uyeler: [['Ad soyad', adSoyad], ['E-posta', (u) => u.eposta || '—'], ['Rol', (u) => (u.rol === 'ogrenci' ? 'Öğrenci' : u.rol === 'veli' ? 'Veli' : 'Seçmedi')],
+        ['Sınıf · alan', sinifAlan], ['Şehir', sehirOf], ['Kayıt', (u) => kisaTarih(u.kayit)], ['Son giriş', (u) => kisaTarih(sonGiris(u))]],
+      deneme: [['Ad soyad', adSoyad], ['Sınıf · alan', sinifAlan], ['Durum', (u) => denemeDurumu(u).ad],
+        ['Bitiş', (u) => kisaTarih(u.deneme?.bitis)], ['Kalan gün', (u) => { const k = denemeDurumu(u).kalan; return k === null ? '—' : String(k); }],
+        ['Davet', (u) => String(u.deneme?.davet_sayisi ?? 0)], ['Kazanılan gün', (u) => String(u.deneme?.kazanilan ?? 0)]],
+      aktif: [['Ad soyad', adSoyad], ['Sınıf · alan', sinifAlan], ['Son giriş', (u) => kisaTarih(sonGiris(u))],
+        ['Program', (u) => (u.hafta.program ? '✓' : '—')], ['Ders', (u) => String(u.hafta.ders)], ['Soru', (u) => String(u.hafta.soru)]],
+    }[sekme];
+    const t = $('liste'); t.replaceChildren();
+    const bas = t.insertRow();
+    for (const [h] of sutunlar) { const th = document.createElement('th'); th.textContent = h; bas.append(th); }
+    for (const u of uyeler) {
+      const tr = t.insertRow();
+      for (const [, f] of sutunlar) tr.insertCell().textContent = f(u);
+    }
+    $('listeNotu').textContent = `${uyeler.length} kişi` + (sekme === 'deneme' ? ' · abonelik açılınca "Abone" durumu dolar' : '');
+  }
+
+  // Açık oturum varsa doğrudan yüklenir.
+  sb.auth.getSession().then(({ data }) => (data.session ? yukle() : ekran('giris')));
+})();
+</script>
+</body>
+</html>
