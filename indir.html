@@ -10,8 +10,8 @@
 <script>
   // Föy kapağındaki QR buraya gelir (https://mentorkocum.github.io/indir). Mağaza bağlantıları yayından sonra
   // aşağıya yazılır; bağlantı doluysa telefon türüne göre doğrudan mağazaya gidilir, boşsa bu sayfa görünür.
-  var PLAY = '';   // ör. https://play.google.com/store/apps/details?id=com.mentorkoc.app
-  var APPSTORE = ''; // ör. https://apps.apple.com/tr/app/id0000000000
+  var PLAY = 'https://play.google.com/store/apps/details?id=com.mentorkoc.app';
+  var APPSTORE = 'https://apps.apple.com/tr/app/id6824010940';
   (function () {
     var ua = navigator.userAgent || '';
     if (/android/i.test(ua) && PLAY) location.replace(PLAY);
