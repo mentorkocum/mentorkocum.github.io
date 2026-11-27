@@ -77,8 +77,15 @@
 
   <section id="girisBolumu" class="giris gizli">
     <div class="kart">
-      <div id="girisHata" class="hata gizli"></div>
-      <button class="ana" id="girisDugme" type="button">Google ile giriş yap</button>
+      <form id="girisFormu">
+        <label class="etiket" for="eposta">E-posta</label>
+        <input id="eposta" type="email" autocomplete="username" required>
+        <label class="etiket" for="sifre">Şifre</label>
+        <input id="sifre" type="password" autocomplete="current-password" required>
+        <div id="girisHata" class="hata gizli"></div>
+        <button class="ana" id="girisDugme" type="submit">Giriş yap</button>
+      </form>
+      <button id="googleDugme" type="button" style="width:100%;margin-top:10px;padding:10px">Google ile giriş yap</button>
     </div>
     <p class="not">Yalnız yönetici hesabına veri gelir.</p>
   </section>
@@ -156,8 +163,19 @@
   }
   const goster = (el, metin) => { el.textContent = metin; el.classList.remove('gizli'); };
 
-  // Sahibin hesabı Google ile açılmış (şifresi yok). Google'dan dönünce oturum adresten alınır (detectSessionInUrl).
-  $('girisDugme').addEventListener('click', async () => {
+  // Sahibin hesabı e-posta ve şifreyle açılmış (28.11). Google ile açılan hesaplar için ikinci düğme; Google'dan dönünce
+  // oturum adresten alınır (detectSessionInUrl).
+  $('girisFormu').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('girisHata').classList.add('gizli');
+    $('girisDugme').disabled = true;
+    const { error } = await sb.auth.signInWithPassword({ email: $('eposta').value.trim(), password: $('sifre').value });
+    $('girisDugme').disabled = false;
+    if (error) { goster($('girisHata'), 'Giriş olmadı: e-posta ya da şifre yanlış.'); return; }
+    $('sifre').value = '';
+    yukle();
+  });
+  $('googleDugme').addEventListener('click', async () => {
     $('girisHata').classList.add('gizli');
     const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
     if (error) goster($('girisHata'), 'Giriş açılmadı: ' + error.message);
