@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Panel">
+<title>Mentiy · Kontrol paneli</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="simge-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+  /* Mentiy yapay zekâ tarafının teması (egitim-kocu-sosyal/src/sosyal/yzTema.ts) ve arka plan videosu (KareZemin). */
+  :root {
+    --zemin: #000; --kart: rgba(20,20,20,.86); --grup: #1E1E1E; --kenar: rgba(255,255,255,.08); --cizgi: rgba(255,255,255,.06);
+    --yazi: #EEEEEE; --ikinci: #DADADA; --soluk: #9A9A9A; --dahaSoluk: #7E7E7E; --hap: rgba(255,255,255,.08);
+    --kirmizi: #FF7A59; --turuncu: #FF8A5C; --sari: #F2C94C; --yesil: #34D399; --mavi: #60A5FA; --mor: #B794F6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { min-height: 100dvh; -webkit-tap-highlight-color: transparent; }
+  #zemin { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; }
+  main { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 88px); }
+  h1, h2 { font-family: Lora, Georgia, serif; font-weight: 500; margin: 0; }
+  h1 { font-size: 19px; }
+  h2 { font-size: 15px; color: var(--ikinci); margin: 18px 4px 8px; }
+  .gizli { display: none !important; }
+  .ust { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .ust img { height: 22px; }
+  .ust .sag { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--soluk); font-size: 12px; }
+  button { font: inherit; color: var(--yazi); background: var(--hap); border: 1px solid var(--kenar); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  button.ana { background: #fff; color: #000; border-color: #fff; width: 100%; padding: 12px; font-weight: 500; }
+  .kart { background: var(--kart); border: 1px solid var(--kenar); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .izgara { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .izgara .kart { margin-bottom: 0; }
+  .etiket { font-size: 12px; color: var(--soluk); }
+  .sayi { font-size: 26px; font-weight: 500; line-height: 1.2; letter-spacing: -.01em; }
+  .alt { font-size: 12px; color: var(--soluk); margin-top: 2px; }
+  .satir { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 0; border-top: 1px solid var(--cizgi); font-size: 14px; }
+  .satir:first-of-type { border-top: 0; }
+  .satir span:first-child { color: var(--ikinci); }
+  .satir b { font-weight: 500; }
+  .nokta { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .cubuklar { display: flex; align-items: flex-end; gap: 3px; height: 64px; margin-top: 8px; }
+  .cubuklar div { flex: 1; border-radius: 3px 3px 0 0; background: var(--kirmizi); min-height: 2px; }
+  .eksen { display: flex; justify-content: space-between; font-size: 11px; color: var(--dahaSoluk); margin-top: 4px; }
+  .bar { height: 6px; background: var(--grup); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .bar i { display: block; height: 100%; background: var(--kirmizi); border-radius: 3px; }
+  .not { font-size: 12px; color: var(--dahaSoluk); margin: 6px 4px 0; }
+  .hap { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--hap); color: var(--ikinci); }
+  .bekliyor { color: var(--soluk); font-size: 13px; }
+  .sekmeler { position: fixed; z-index: 2; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 10px); width: min(532px, calc(100% - 28px));
+    display: flex; justify-content: space-around; background: rgba(14,14,14,.92); border: 1px solid var(--kenar); border-radius: 18px; padding: 6px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .sekmeler button { background: none; border: 0; color: var(--soluk); font-size: 13px; padding: 8px 6px; border-radius: 12px; flex: 1; }
+  .sekmeler button.secili { color: var(--yazi); background: var(--hap); }
+  .giris { max-width: 360px; margin: 18vh auto 0; }
+  .giris input { width: 100%; font: inherit; color: var(--yazi); background: var(--grup); border: 1px solid var(--kenar); border-radius: 12px; padding: 12px; margin: 6px 0 12px; }
+  .hata { color: var(--kirmizi); font-size: 13px; margin: 8px 0; }
+  .ornek { background: rgba(242,201,76,.12); color: var(--sari); border: 1px solid rgba(242,201,76,.3); border-radius: 12px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<video id="zemin" src="zemin.mp4" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+<main>
+  <div class="ust">
+    <img src="logo.svg" alt="Mentiy">
+    <h1>Kontrol paneli</h1>
+    <div class="sag gizli" id="ustSag"><span id="guncel"></span><button id="yenile" aria-label="Yenile">Yenile</button></div>
+  </div>
+
+  <section id="girisBolumu" class="giris gizli">
+    <div class="kart">
+      <div id="girisHata" class="hata gizli"></div>
+      <button class="ana" id="girisDugme" type="button">Google ile giriş yap</button>
+    </div>
+    <p class="not">Yalnız yönetici hesabına veri gelir.</p>
+  </section>
+
+  <div id="ornekUyari" class="ornek gizli">Örnek veri gösteriliyor, gerçek sayılar değil.</div>
+  <div id="panelHata" class="hata gizli"></div>
+  <section id="ozet" class="sayfa gizli"></section>
+  <section id="para" class="sayfa gizli"></section>
+  <section id="kullanim" class="sayfa gizli"></section>
+  <section id="reklam" class="sayfa gizli"></section>
+  <section id="uyari" class="sayfa gizli"></section>
+</main>
+
+<nav class="sekmeler gizli" id="sekmeler">
+  <button data-s="ozet" class="secili">Özet</button>
+  <button data-s="para">Para</button>
+  <button data-s="kullanim">Kullanım</button>
+  <button data-s="reklam">Reklam</button>
+  <button data-s="uyari">Uyarı</button>
+</nav>
+
+<script>
+(() => {
+  const ADRES = 'https://zkexgpsfapawmbqzzuso.supabase.co';
+  const ANAHTAR = 'sb_publishable_gPaW4eTz6mv18xjmTeujOA_7jatEHQC';
+  const sb = supabase.createClient(ADRES, ANAHTAR, { auth: { storageKey: 'mentiy-panel-oturum' } });
+  const $ = (id) => document.getElementById(id);
+  const ORNEK = new URLSearchParams(location.search).has('ornek');
+
+  // Net oran (KDV ÷1,20 → Apple dijital hizmet vergisi ×0,95 → mağaza payı ×0,85). Gelir vergisi düşülmez.
+  const MAGAZA = { APP_STORE: { ad: 'App Store', oran: 0.6729 }, PLAY_STORE: { ad: 'Google Play', oran: 0.7083 } };
+  const PAKET = { temel: 'Temel', pro: 'Pro', plus: 'Plus', platin: 'Platin' };
+  const ARAC = { sohbet: 'Sohbet', soru: 'Soru çözümü', ozet: 'Özet', yonlendirme: 'Yönlendirme' };
+  const SIKAYET = { uygunsuz: 'Uygunsuz', zararli: 'Zararlı', yanlis: 'Yanlış', diger: 'Diğer' };
+
+  const sayi = (n, k = 0) => (n == null || isNaN(n) ? '—' : Number(n).toLocaleString('tr-TR', { minimumFractionDigits: k, maximumFractionDigits: k }));
+  const tl = (n, k = 0) => (n == null || isNaN(n) ? '—' : '₺' + sayi(n, k));
+  const yuzde = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+  const tarih = (d) => d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const satir = (sol, sag) => `<div class="satir"><span>${sol}</span><b>${sag}</b></div>`;
+  const kart = (ic, renk) => `<div class="kart"${renk ? ` style="border-top:2px solid ${renk}"` : ''}>${ic}</div>`;
+  const kutu = (etiket, deger, alt) => `<div class="kart"><div class="etiket">${etiket}</div><div class="sayi">${deger}</div>${alt ? `<div class="alt">${alt}</div>` : ''}</div>`;
+  const cubuklar = (dizi, renk) => {
+    const en = Math.max(1, ...dizi);
+    return `<div class="cubuklar">${dizi.map((v) => `<div style="height:${Math.max(3, Math.round((v / en) * 100))}%;background:${renk};opacity:${v === en ? 1 : 0.55}" title="${v}"></div>`).join('')}</div>`;
+  };
+
+  // Tahmini yatış tarihleri (mağaza kurallarına göre, kesin değil):
+  // Google Play: ayın kazancı ertesi ayın 15'i civarında gönderilir.
+  // Apple: mali ayın bitişinden sonra en geç 45 gün; çoğunlukla ~33 gün sonra.
+  function yatisTarihi(ay, magaza) {
+    const [y, m] = ay.split('-').map(Number);
+    if (magaza === 'PLAY_STORE') return new Date(y, m, 15);
+    return new Date(new Date(y, m, 0).getTime() + 33 * 86400000);
+  }
+
+  let veri = null;
+  let sekme = 'ozet';
+
+  document.querySelectorAll('#sekmeler button').forEach((b) =>
+    b.addEventListener('click', () => {
+      sekme = b.dataset.s;
+      document.querySelectorAll('#sekmeler button').forEach((x) => x.classList.toggle('secili', x === b));
+      document.querySelectorAll('.sayfa').forEach((s) => s.classList.toggle('gizli', s.id !== sekme));
+      window.scrollTo({ top: 0 });
+    }),
+  );
+
+  function ekran(ad) {
+    $('girisBolumu').classList.toggle('gizli', ad !== 'giris');
+    $('sekmeler').classList.toggle('gizli', ad !== 'panel');
+    $('ustSag').classList.toggle('gizli', ad !== 'panel');
+    document.querySelectorAll('.sayfa').forEach((s) => s.classList.toggle('gizli', ad !== 'panel' || s.id !== sekme));
+  }
+  const goster = (el, metin) => { el.textContent = metin; el.classList.remove('gizli'); };
+
+  // Sahibin hesabı Google ile açılmış (şifresi yok). Google'dan dönünce oturum adresten alınır (detectSessionInUrl).
+  $('girisDugme').addEventListener('click', async () => {
+    $('girisHata').classList.add('gizli');
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    if (error) goster($('girisHata'), 'Giriş açılmadı: ' + error.message);
+  });
+  $('yenile').addEventListener('click', () => yukle());
+
+  async function yukle() {
+    if (ORNEK) { veri = ornekVeri(); $('ornekUyari').classList.remove('gizli'); return ciz(); }
+    const { data: o } = await sb.auth.getSession();
+    if (!o.session) return ekran('giris');
+    try {
+      const r = await fetch(`${ADRES}/functions/v1/yonetici-panel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${o.session.access_token}`, apikey: ANAHTAR, 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 401 || r.status === 403) {
+        await sb.auth.signOut();
+        ekran('giris');
+        return goster($('girisHata'), j.durum === 'yetki_yok' ? 'Bu hesabın yönetici izni yok.' : 'Oturum kapandı, yeniden giriş yap.');
+      }
+      if (!r.ok) throw new Error(j.durum || 'HTTP ' + r.status);
+      veri = j;
+      $('panelHata').classList.add('gizli');
+      ciz();
+    } catch (h) {
+      goster($('panelHata'), 'Veriler alınamadı: ' + h.message);
+      if (veri) ekran('panel');
+    }
+  }
+
+  function ciz() {
+    ekran('panel');
+    const v = veri;
+    const kur = Number(v.api?.kur) || 42;
+    $('guncel').textContent = new Date(v.zaman).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+    const ab = v.aboneler || {};
+    const ku = v.kullanicilar || {};
+    const api = v.api || {};
+    const buAy = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
+    const gelirAy = (ay) => (v.gelir || []).filter((g) => g.ay === ay);
+    const netAy = (ay) => gelirAy(ay).reduce((a, g) => a + Number(g.net || 0), 0);
+    const brutAy = (ay) => gelirAy(ay).reduce((a, g) => a + Number(g.brut || 0), 0);
+    const maliyetUsd = (k) => ['claude', 'mimo', 'serper'].reduce((a, s) => a + Number(api[s]?.[k] || 0), 0);
+    const maliyetBugun = maliyetUsd('bugun_usd') * kur;
+    const maliyetAy = maliyetUsd('ay_usd') * kur;
+    const g = v.gpu || {};
+    const makine = (g.makineler || []).find((m) => m.durum === 'RUNNING') || (g.makineler || [])[0];
+    const gpuDurum = g.isci?.durum === 'acik' ? ['Açık', 'var(--yesil)'] : g.isci?.durum === 'tanimsiz' ? ['Tanımsız', 'var(--soluk)'] : ['Kapalı', 'var(--kirmizi)'];
+    const gpuKiraGun = makine && makine.durum === 'RUNNING' && makine.saatlik_usd ? makine.saatlik_usd * 24 * kur : 0;
+    const hata = v.hata || {};
+    const hataOrani = yuzde(Number(hata.istek_hata || 0) + Number(hata.resim_hata || 0), Number(hata.istek || 0) + Number(hata.resim || 0));
+    const sk = v.sikayet || {};
+    const uyarilar = [];
+    if (sk.acik) uyarilar.push(`${sk.acik} açık şikâyet`);
+    if (hataOrani >= 5) uyarilar.push(`Bugün hata oranı %${hataOrani}`);
+    if (gpuDurum[0] === 'Kapalı') uyarilar.push('GPU işçisi cevap vermiyor');
+    const dp = v.depolama || {};
+    if (dp.veritabani_mb >= 400) uyarilar.push(`Veritabanı ${sayi(dp.veritabani_mb)} MB / 500 MB`);
+    if (dp.dosya_mb >= 850) uyarilar.push(`Dosyalar ${sayi(dp.dosya_mb)} MB / 1 GB`);
+
+    // --- Özet ---
+    $('ozet').innerHTML = `
+      <div class="izgara">
+        ${kutu('Şu an çevrimiçi', sayi(ku.cevrimici), 'son 5 dakikada işlem')}
+        ${kutu('Abone', sayi(ab.toplam), `Pro ${sayi(ab.pro)} · Plus ${sayi(ab.plus)} · Platin ${sayi(ab.platin)}`)}
+      </div>
+      <div style="height:10px"></div>
+      ${kart(`<div class="etiket">Bu ay elimize kalan</div><div class="sayi">${tl(netAy(buAy))}</div>
+        <div class="alt">Brüt ${tl(brutAy(buAy))} · KDV, vergi ve mağaza payı düşülmüş</div>`, 'var(--yesil)')}
+      ${kart(`<div class="etiket">Bugünkü maliyet</div><div class="sayi">${tl(maliyetBugun)}</div>
+        <div class="alt">Claude ${tl(api.claude?.bugun_usd * kur)} · MiMo ${tl(api.mimo?.bugun_usd * kur)} · Serper ${tl(api.serper?.bugun_usd * kur)}</div>`, 'var(--sari)')}
+      ${kart(`<div style="display:flex;align-items:center"><span class="nokta" style="background:${gpuDurum[1]}"></span><span>GPU ${gpuDurum[0]}</span>
+        <span class="alt" style="margin-left:auto">${makine ? `${esc(makine.gpu || '')} · yük %${sayi(makine.gpu_yuk)}` : ''} · kuyruk ${sayi(g.bekleyen)}</span></div>`, 'var(--mor)')}
+      ${kart(`<div class="etiket">Kullanıcılar</div><div class="sayi">${sayi(ku.toplam)}</div>
+        <div class="alt">Yapay zekâ ${sayi(ku.yz)} · Eğitim ${sayi(ku.egitim)} · bugün yeni ${sayi(ku.bugun_yeni)}</div>`, 'var(--mavi)')}
+      ${kart(uyarilar.length ? uyarilar.map((u) => `<div class="satir"><span><span class="nokta" style="background:var(--kirmizi)"></span>${esc(u)}</span></div>`).join('') : '<span class="bekliyor">Uyarı yok</span>', 'var(--kirmizi)')}`;
+
+    // --- Para ---
+    const aylar = [...new Set((v.gelir || []).map((x) => x.ay))].sort().reverse();
+    const yatislar = (v.gelir || [])
+      .filter((x) => MAGAZA[x.magaza] && Number(x.net) > 0)
+      .map((x) => ({ t: yatisTarihi(x.ay, x.magaza), net: Number(x.net), magaza: MAGAZA[x.magaza].ad, ay: x.ay }))
+      .filter((x) => x.t >= new Date(Date.now() - 86400000))
+      .sort((a, b) => a.t - b.t);
+    const karAy = netAy(buAy) - maliyetAy;
+    const aktif = Number(ku.aktif_hafta) || 0;
+    $('para').innerHTML = `
+      <h2>Bu ay</h2>
+      ${kart(`${satir('Brüt satış', tl(brutAy(buAy)))}${satir('Elimize kalan', tl(netAy(buAy)))}${satir('API maliyeti', tl(maliyetAy))}
+        ${satir('Kâr / zarar', `<span style="color:${karAy >= 0 ? 'var(--yesil)' : 'var(--kirmizi)'}">${tl(karAy)}</span>`)}
+        ${gpuKiraGun ? satir('GPU kirası (şu anki ücretle, günlük)', tl(gpuKiraGun)) : ''}
+        ${satir('Aktif kullanıcı başına maliyet', aktif ? tl(maliyetAy / aktif, 2) : '—')}`, 'var(--yesil)')}
+      <p class="not">Hesap: fiyat ÷ 1,20 KDV, Apple'da × 0,95 dijital hizmet vergisi, sonra × 0,85 mağaza payı. Gelir vergisi düşülmedi. GPU kirası kâra katılmadı.</p>
+      <h2>Hesabına yatacaklar (tahmini)</h2>
+      ${kart(yatislar.length ? yatislar.map((x) => satir(`${tarih(x.t)} · ${x.magaza}`, tl(x.net))).join('') : '<span class="bekliyor">Bekleyen ödeme yok</span>')}
+      <p class="not">Google ertesi ayın 15'i civarı, Apple mali ay bitiminden en geç 45 gün sonra öder. Tarihler mağaza kuralına göre tahmin.</p>
+      <h2>Aylar</h2>
+      ${aylar.length ? aylar.map((ay) => kart(`<div class="etiket">${new Date(ay + '-15').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}</div>
+        ${gelirAy(ay).map((x) => satir(`${MAGAZA[x.magaza]?.ad || esc(x.magaza)} · ${sayi(x.adet)} satış`, `${tl(x.net)} <span class="alt">(brüt ${tl(x.brut)})</span>`)).join('')}`)).join('') : kart('<span class="bekliyor">Henüz satış yok</span>')}
+      <h2>Abone hareketi</h2>
+      ${kart(`${satir('Bu ay yeni abone', sayi(ab.yeni_bu_ay))}${satir('İptal etti (dönemi sürüyor)', sayi(ab.iptal_edilen))}${satir('Bu ay biten', sayi(ab.biten_bu_ay))}
+        ${satir('Ücretsizden aboneye geçiş', `%${yuzde(ab.toplam, ku.yz)}`)}${ab.elle ? satir('Elle verilen (test)', sayi(ab.elle)) : ''}`, 'var(--mavi)')}`;
+
+    // --- Kullanım ---
+    const ist = v.istemler || {};
+    const saat = v.saatler || Array(24).fill(0);
+    const enYogun = saat.indexOf(Math.max(...saat));
+    const gun = api.gunluk || [];
+    const hak = v.hak || {};
+    $('kullanim').innerHTML = `
+      <div class="izgara">
+        ${kutu('Bugünkü istem', sayi(ist.bugun), `bu hafta ${sayi(ist.hafta)}`)}
+        ${kutu('Toplam istem', sayi(ist.toplam), `bu ay ${sayi(ist.ay)}`)}
+      </div>
+      <h2>Bugün araç araç</h2>
+      ${kart(Object.entries(ist.arac_bugun || {}).map(([a, n]) => satir(ARAC[a] || esc(a), sayi(n))).join('') + satir('Resim', sayi(ist.resim_bugun)) || '<span class="bekliyor">Bugün istem yok</span>', 'var(--turuncu)')}
+      <h2>En yoğun saatler (son 30 gün)</h2>
+      ${kart(`${cubuklar(saat, 'var(--kirmizi)')}<div class="eksen"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+        <div class="alt" style="margin-top:6px">En yoğun: ${String(enYogun).padStart(2, '0')}:00–${String(enYogun + 1).padStart(2, '0')}:00</div>`)}
+      <h2>Kullanıcılar</h2>
+      ${kart(`${satir('Yapay zekâ hesabı', sayi(ku.yz))}${satir('Eğitim (öğrenci / veli)', `${sayi(ku.ogrenci)} / ${sayi(ku.veli)}`)}
+        ${satir('Bugün / bu hafta / bu ay yeni', `${sayi(ku.bugun_yeni)} / ${sayi(ku.hafta_yeni)} / ${sayi(ku.ay_yeni)}`)}${satir('Bugün aktif', sayi(ku.aktif_bugun))}${satir('7 günde aktif', sayi(ku.aktif_hafta))}`, 'var(--mavi)')}
+      <h2>Hak kullanımı (bu dönem)</h2>
+      ${kart(['temel', 'pro', 'plus', 'platin'].filter((p) => hak[p]).map((p) => `<div class="satir"><span>${PAKET[p]} · ${sayi(hak[p].kisi)} kişi</span><b>%${sayi(hak[p].ortalama)}</b></div>
+        <div class="bar"><i style="width:${Math.min(100, Number(hak[p].ortalama) || 0)}%"></i></div>${hak[p].dolan ? `<div class="alt">${sayi(hak[p].dolan)} kişi hakkının %90'ını kullandı</div>` : ''}`).join('') || '<span class="bekliyor">Dönemi süren hesap yok</span>', 'var(--yesil)')}
+      <h2>Maliyet (son 14 gün)</h2>
+      ${kart(gun.length ? `${cubuklar(gun.map((x) => Number(x.usd) * kur), 'var(--sari)')}<div class="eksen"><span>${esc(gun[0].gun.slice(5))}</span><span>${esc(gun[gun.length - 1].gun.slice(5))}</span></div>
+        ${satir('Bu ay Claude', tl(api.claude?.ay_usd * kur))}${satir('Bu ay MiMo', tl(api.mimo?.ay_usd * kur))}${satir('Bu ay Serper', `${tl(api.serper?.ay_usd * kur)} <span class="alt">(${sayi(api.serper?.arama_ay)} arama)</span>`)}
+        ${satir('Geçen ay toplam', tl(maliyetUsd('gecen_ay_usd') * kur))}` : '<span class="bekliyor">Maliyet kaydı yok</span>', 'var(--sari)')}
+      <p class="not">Dolar kuru ${sayi(kur, 2)} ₺ (sunucu ayarı).</p>
+      <h2>GPU</h2>
+      ${kart(`${satir('İşçi', `<span class="nokta" style="background:${gpuDurum[1]}"></span>${gpuDurum[0]}${g.isci?.ms ? ` · ${sayi(g.isci.ms)} ms` : ''}`)}
+        ${(g.makineler || []).map((m) => satir(`${esc(m.ad)} · ${esc(m.gpu || '')}`, `${m.durum === 'RUNNING' ? 'açık' : 'kapalı'}${m.gpu_yuk != null ? ` · yük %${sayi(m.gpu_yuk)} · bellek %${sayi(m.bellek_yuk)}` : ''}${m.saatlik_usd ? ` · ${sayi(m.saatlik_usd, 2)} $/sa` : ''}`)).join('')}
+        ${satir('Bugün resim işi', `${sayi(g.is_bugun)} · ${sayi(g.gpu_sn_bugun)} GPU sn`)}${satir('Bu ay resim işi', `${sayi(g.is_ay)} · ${sayi(g.gpu_sn_ay)} GPU sn`)}${satir('Kuyrukta', sayi(g.bekleyen))}`, 'var(--mor)')}`;
+
+    // --- Reklam ve mağaza (erişim bekleniyor) ---
+    const bekleyen = (ad, ne) => kart(`<div class="satir"><span>${ad}</span><span class="hap">Bağlantı bekleniyor</span></div><div class="alt">${ne}</div>`);
+    $('reklam').innerHTML = `
+      <h2>Mağaza</h2>
+      ${bekleyen('Google Play', 'İndirmeler, puan ve yorumlar. Play Console servis hesabı gerekiyor.')}
+      ${bekleyen('App Store', 'İndirmeler, puan ve yorumlar. App Store Connect API anahtarı gerekiyor.')}
+      <h2>Reklam ve paylaşımlar</h2>
+      ${bekleyen('Instagram / Facebook', 'Video video izlenme ve etkileşim, reklamlı ve reklamsız ayrı.')}
+      ${bekleyen('TikTok', 'Video video izlenme ve etkileşim, reklamlı ve reklamsız ayrı.')}
+      ${bekleyen('YouTube', 'Video video izlenme ve etkileşim, reklamlı ve reklamsız ayrı.')}
+      <p class="not">Hangi reklamdan kaç indirme ve abone geldiği, reklamlarda izli mağaza bağlantısı kullanılınca görünür.</p>`;
+
+    // --- Uyarı ---
+    $('uyari').innerHTML = `
+      <h2>Şikâyetler</h2>
+      ${kart(`${satir('Açık', sayi(sk.acik))}${satir('Son 7 gün', sayi(sk.hafta))}
+        ${(sk.son || []).map((s) => satir(`${esc(s.tur === 'cevap' ? 'Cevap' : s.tur === 'resim' ? 'Resim' : 'Video')} · ${SIKAYET[s.sebep] || esc(s.sebep)}`, new Date(s.zaman).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))).join('')}`, 'var(--kirmizi)')}
+      <h2>Sunucu</h2>
+      ${kart(`${satir('Bugünkü hata oranı', `%${hataOrani}`)}${satir('Yapay zekâ isteği / hatalı', `${sayi(hata.istek)} / ${sayi(hata.istek_hata)}`)}${satir('Resim / hatalı', `${sayi(hata.resim)} / ${sayi(hata.resim_hata)}`)}`)}
+      <h2>Depolama</h2>
+      ${kart(`<div class="satir"><span>Veritabanı</span><b>${sayi(dp.veritabani_mb)} / 500 MB</b></div><div class="bar"><i style="width:${Math.min(100, yuzde(dp.veritabani_mb, 500))}%"></i></div>
+        <div class="satir" style="margin-top:6px"><span>Dosyalar</span><b>${dp.dosya_mb != null ? sayi(dp.dosya_mb) : '—'} / 1.024 MB</b></div><div class="bar"><i style="width:${Math.min(100, yuzde(dp.dosya_mb, 1024))}%"></i></div>`)}
+      <h2>Telefona bildirim</h2>
+      ${kart('<span class="bekliyor">Maliyet sınırı, sunucu hatası, Claude kredisi ve GPU sorunu için bildirimler sonraki adımda açılacak.</span>')}`;
+  }
+
+  // Yerel deneme için örnek veri (?ornek). Gerçek sayı değildir.
+  function ornekVeri() {
+    const ay = new Date().toISOString().slice(0, 7);
+    const once = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15).toISOString().slice(0, 7);
+    return {
+      zaman: new Date().toISOString(),
+      kullanicilar: { toplam: 1240, yz: 1010, egitim: 410, ogrenci: 320, veli: 90, bugun_yeni: 38, hafta_yeni: 212, ay_yeni: 780, cevrimici: 12, aktif_bugun: 260, aktif_hafta: 640 },
+      aboneler: { pro: 20, plus: 18, platin: 10, toplam: 48, elle: 2, iptal_edilen: 3, biten_bu_ay: 1, yeni_bu_ay: 31 },
+      gelir: [
+        { ay, magaza: 'APP_STORE', adet: 14, brut: 4580, net: 3082 },
+        { ay, magaza: 'PLAY_STORE', adet: 26, brut: 7660, net: 5426 },
+        { ay: once, magaza: 'PLAY_STORE', adet: 9, brut: 2470, net: 1749 },
+        { ay: once, magaza: 'APP_STORE', adet: 4, brut: 1146, net: 771 },
+      ],
+      istemler: { bugun: 1820, hafta: 11240, ay: 38110, toplam: 52400, resim_bugun: 96, resim_toplam: 2310, arac_bugun: { sohbet: 1310, soru: 402, ozet: 61, yonlendirme: 47 } },
+      saatler: [12, 6, 3, 1, 0, 1, 4, 18, 40, 52, 48, 44, 50, 61, 70, 82, 101, 122, 140, 151, 133, 96, 58, 27],
+      api: { kur: 42, claude: { istek_bugun: 1400, bugun_usd: 5.0, ay_usd: 96, gecen_ay_usd: 41 }, mimo: { istek_bugun: 420, bugun_usd: 1.9, ay_usd: 37, gecen_ay_usd: 15 }, serper: { arama_bugun: 480, arama_ay: 9100, bugun_usd: 0.48, ay_usd: 9.1, gecen_ay_usd: 4 },
+        gunluk: Array.from({ length: 14 }, (_, i) => ({ gun: new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10), usd: 3 + i * 0.35 + (i % 3) })) },
+      gpu: { is_bugun: 96, gpu_sn_bugun: 610, is_ay: 2050, gpu_sn_ay: 13100, bekleyen: 0, isci: { durum: 'acik', ms: 240 },
+        makineler: [{ ad: 'mentiy-gpu', durum: 'RUNNING', gpu: 'RTX PRO 6000', saatlik_usd: 1.79, acik_sn: 86400, gpu_yuk: 62, bellek_yuk: 48 }] },
+      hak: { temel: { kisi: 940, ortalama: 41, dolan: 120 }, pro: { kisi: 20, ortalama: 63, dolan: 4 }, plus: { kisi: 18, ortalama: 48, dolan: 2 }, platin: { kisi: 10, ortalama: 35, dolan: 0 } },
+      sikayet: { acik: 2, hafta: 5, son: [{ tur: 'cevap', sebep: 'yanlis', zaman: new Date(Date.now() - 3600e3).toISOString() }, { tur: 'resim', sebep: 'uygunsuz', zaman: new Date(Date.now() - 86400e3).toISOString() }] },
+      hata: { istek: 1820, istek_hata: 14, resim: 96, resim_hata: 2 },
+      depolama: { veritabani_mb: 212, dosya_mb: 640 },
+    };
+  }
+
+  sb.auth.onAuthStateChange((olay) => {
+    if (olay === 'SIGNED_OUT' && !ORNEK) ekran('giris');
+    if (olay === 'SIGNED_IN' && !veri) yukle();
+  });
+  // Açıkken dakikada bir yenilenir; uygulama arka plandayken durur.
+  setInterval(() => { if (document.visibilityState === 'visible' && veri) yukle(); }, 60_000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && veri) yukle(); });
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => undefined);
+  yukle();
+})();
+</script>
+</body>
+</html>
